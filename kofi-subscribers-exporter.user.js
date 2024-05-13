@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name         Monthly Fetcher
+// @name         Ko-Fi Monthly Subscriber List Fetcher
 // @namespace    https://github.com/bountygiver/kofi-subscribers-exporter
 // @version      2024-05-12
 // @description  Fetch Ko-Fi Subscribers and process the text
@@ -8,6 +8,10 @@
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=ko-fi.com
 // @grant        none
 // ==/UserScript==
+
+
+const custScriptLoadingLabelId = "custScriptLoadingGenSubLabel";
+const custScriptButtonId = "custScriptButtonGenSubLabel";
 
 function downloadTransaction(month, callback) {
     const data = {
@@ -31,24 +35,57 @@ function downloadTransaction(month, callback) {
         "credentials": "include"
     }).then((d) => {
         d.text().then(callback);
+    }).catch(() => {
+        alert("An error occurred when retrieving subscribers, please try again later.");
+        $(`#${custScriptLoadingLabelId}`).hide();
+        $(`#${custScriptButtonId}`).show();
     });
 }
 
-function removeQuotes(s) {
-    if (s.startsWith('"') && s.endsWith('"')) {
-        return s.substring(1, s.length - 1)
+function csvRowToArray(str) {
+  const seperator = ','
+  const block = '"'
+  const columns = [];
+  let column = '',
+    inQuotes = false;
+  if (!str) {
+    return null
+  }
+  for (let i = 0; i < str.length; i++) {
+    let letter = str[i];
+    if (letter === seperator && !inQuotes) {
+      columns.push(column);
+      column = '';
+      continue;
     }
-    return s;
+
+    if (letter !== block) {
+      column += letter;
+      continue;
+    }
+
+    if (!inQuotes) {
+      inQuotes = true;
+      continue;
+    }
+
+    if (i + 1 < str.length && str[i + 1] === block) {
+      i += 1
+      column += block;
+    } else {
+      inQuotes = false;
+    }
+  }
+  columns.push(column);
+
+  return columns;
 }
 
-const CSVToArray = (data, delimiter = ',', omitFirstRow = false) =>
-data
-.slice(omitFirstRow ? data.indexOf('\n') + 1 : 0)
-.split('\n')
-.map(v => v.split(delimiter).map(removeQuotes)).filter((v) => v && v.length);
-
-const custScriptLoadingLabelId = "custScriptLoadingGenSubLabel";
-const custScriptButtonId = "custScriptButtonGenSubLabel";
+const CSVToArray = (data, omitFirstRow = false) =>
+  data
+  .slice(omitFirstRow ? data.indexOf('\n') + 1 : 0)
+  .split('\n')
+  .map(csvRowToArray).filter((v) => v && v.length);
 
 function downloadTxt(data) {
     const blob = new Blob([data], {type: 'text/txt'});
@@ -68,10 +105,8 @@ function downloadTxt(data) {
 function main() {
     'use strict';
 
-    console.log("Fetcher on!");
     let downloadCsv = $("button[data-target='#exportToCsvModal']");
-    if (downloadCsv.length) {
-        console.log("IN MANAGE PAGE");
+    if (downloadCsv.length && $("#selectedMonth").length) {
         let loadingLabel = $(`<div> Please wait while we are fetching subscribers... This will take around 5 seconds due to anti spam requests ... </div>`);
         loadingLabel.attr("id", custScriptLoadingLabelId);
         let downloadButton = $(`<button type="button" class="kfds-btn-ghost-dark kfds-srf-rounded" style="float: right">
