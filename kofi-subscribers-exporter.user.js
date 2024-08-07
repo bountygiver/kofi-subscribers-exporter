@@ -118,8 +118,8 @@ function main() {
             $(`#${custScriptLoadingLabelId}`).show();
             $(`#${custScriptButtonId}`).hide();
             loadingLabel.show();
-            let thisMonth = $($("#selectedMonth").find("option")[0]).val();
-            let lastMonth = $($("#selectedMonth").find("option")[1]).val();
+            let thisMonth = $($("#selectedMonth").find("option")[1]).val();
+            let lastMonth = $($("#selectedMonth").find("option")[2]).val();
 
             let monthCutoff = new Date();
             monthCutoff.setMonth(monthCutoff.getMonth() - 1);
